@@ -1,23 +1,62 @@
-const {onDocumentWritten} = require("firebase-functions/v2/firestore");
-const logger = require("firebase-functions/logger");
-const {initializeApp} = require("firebase-admin/app");
-const {getFirestore} = require("firebase-admin/firestore");
-const nodemailer = require('nodemailer');
+const nodemailer = require("nodemailer");
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+admin.initializeApp();
 
-initializeApp();
+const TIMEFRAME_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const VIEW_THRESHOLD = 2; // More than twice within the timeframe
 
-exports.makeuppercase = onDocumentCreated("/messages/{documentId}", (event) => {
-    // Grab the current value of what was written to Firestore.
-    const original = event.data.data().original;
-  
-    // Access the parameter `{documentId}` with `event.params`
-    logger.log("Uppercasing", event.params.documentId, original);
-  
-    const uppercase = original.toUpperCase();
-  
-    // You must return a Promise when performing
-    // asynchronous tasks inside a function
-    // such as writing to Firestore.
-    // Setting an 'uppercase' field in Firestore document returns a Promise.
-    return event.data.ref.set({uppercase}, {merge: true});
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "noddingOff100@gmail.com",
+      pass: "nodeMailing100",
+    },
+});
+
+exports.notifyFrequentViews = functions.firestore
+  .document('users/{userId}/recentlyViewed/{productId}')
+  .onWrite(async (snap, context) => {
+    const { userId, viewId } = context.params;
+    const productData = snap.after.data();
+    const productId = productData.productId;
+
+    if (!productData) {
+      return;
+    } 
+
+    const now = Date.now();
+    const recentViewsRef = admin.firestore().collection('users').doc(userId).collection('recentlyViewed');
+    
+    // Quering for this product within the last 24 hours
+    const recentViewsSnapshot = await recentViewsRef
+      .where('productId', '==', productId)
+      .where('viewedAt', '>=', new Date(now - TIMEFRAME_MS))
+      .get();
+
+    // Check if the product was viewed more than the threshold
+    if (recentViewsSnapshot.size > VIEW_THRESHOLD) {
+        try {
+            // Fetching user email
+            const userDoc = await admin.firestore().collection('users').doc(userId).get();
+            const userEmail = userDoc.data().email;
+
+            if (!userEmail) {
+                console.log(`No email found for user ${userId}`);
+                return;
+            }
+
+            const mailOptions = {
+                from: 'noddingOff100@gmail.com',
+                to: userEmail, 
+                subject: 'Product Viewed Frequently',
+                text: `Product ${productData.productName} has been viewed more than twice in the last 24 hours.`,
+            };
+      
+            await transporter.sendMail(mailOptions);
+            console.log(`Email sent to ${userEmail} for product ${productId}`);
+        } catch (error) {
+            
+        }
+    }
   });
