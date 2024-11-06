@@ -3,7 +3,7 @@ const { cacheData } = require('../services/cacheData');
 
 const getRecentlyViewed = async (req, res) => {
   const { userId } = req.params;
-
+  
   try {
     let recentlyViewed = await recentProducts(userId);
     cacheData(userId, recentlyViewed);

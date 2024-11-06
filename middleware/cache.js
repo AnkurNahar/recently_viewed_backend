@@ -1,7 +1,7 @@
 const redisClient = require('../config/redisClient');
 
 const cache = async (req, res, next) => {
-  const { userId } = req.params;
+  const { userId } = req.params;  
   const cacheKey = `user:${userId}:recentlyViewed`;
 
   // Check if data for the user is cached in Redis
