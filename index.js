@@ -3,11 +3,16 @@ const express = require('express');
 const userRoutes = require('./routes/userRoutes');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
-const swaggerOptions = require('./config/swagger')
+const swaggerOptions = require('./config/swagger');
+const cors = require('cors');
 
 
 const app = express();
 app.use(express.json());
+
+app.use(cors({
+    origin: 'http://localhost:4000' 
+}));
 
 // Swagger setup for API documentation
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
