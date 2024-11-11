@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.notifyFrequentViews = functions.firestore
-  .document('users/{userId}/recentlyViewed/{productId}')
+  .document('users/{userId}/recentlyViewed/{viewID}')
   .onWrite(async (snap, context) => {
     const { userId, viewId } = context.params;
     const productData = snap.after.data();
